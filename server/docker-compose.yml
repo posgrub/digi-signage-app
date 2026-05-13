@@ -1,0 +1,74 @@
+# Xibo CMS Docker Compose
+# Based on official Xibo Docker installation
+# https://xibosignage.com/docs/setup/xibo-cms-docker-install
+#
+# Usage:
+#   cp config.env.template config.env
+#   # Edit config.env with your settings
+#   docker compose up -d
+
+services:
+  cms-web:
+    image: xibosignage/xibo-cms:latest
+    container_name: xibo-cms-web
+    restart: always
+    env_file: config.env
+    volumes:
+      - cms-library:/var/www/cms/library
+      - cms-custom:/var/www/cms/custom
+      - cms-backup:/var/www/backup
+    ports:
+      - "127.0.0.1:9505:80"
+    depends_on:
+      - cms-db
+      - cms-xmr
+    environment:
+      - XMR_HOST=cms-xmr
+
+  cms-xmr:
+    image: xibosignage/xibo-xmr:latest
+    container_name: xibo-cms-xmr
+    restart: always
+    ports:
+      - "127.0.0.1:9505:9505"
+
+  cms-db:
+    image: mariadb:10.11
+    container_name: xibo-cms-db
+    restart: always
+    env_file: config.env
+    volumes:
+      - cms-db-data:/var/lib/mysql
+      - cms-backup:/backup
+    environment:
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-cms}
+      - MYSQL_USER=${MYSQL_USER:-cms}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+
+  # Optional: phpMyAdmin for database management
+  # Uncomment if needed for debugging
+  # cms-phpmyadmin:
+  #   image: phpmyadmin/phpmyadmin
+  #   container_name: xibo-cms-phpmyadmin
+  #   restart: unless-stopped
+  #   ports:
+  #     - "127.0.0.1:9506:80"
+  #   environment:
+  #     - PMA_HOST=cms-db
+  #   depends_on:
+  #     - cms-db
+
+volumes:
+  cms-library:
+    driver: local
+  cms-custom:
+    driver: local
+  cms-db-data:
+    driver: local
+  cms-backup:
+    driver: local
+
+networks:
+  default:
+    name: xibo-network

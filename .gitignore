@@ -1,0 +1,24 @@
+# Environment and secrets
+.env
+*.env.local
+config.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backups (local)
+backups/
+*.sql.gz
+*.tar.gz
+
+# IDE
+.vscode/
+.idea/
+
+# Docker volumes (if mounted locally)
+shared/
+mysql_data/
+
+# Planning
+.planning/
