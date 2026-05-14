@@ -1,28 +1,48 @@
+import { notFound } from "next/navigation";
+import { db } from "@/db";
+import { clients } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { createClient } from "@/lib/actions/clients";
+import { updateClient } from "@/lib/actions/clients";
 
-export default function NewClientPage() {
+export default async function EditClientPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const clientId = parseInt(id);
+
+  const [client] = await db
+    .select()
+    .from(clients)
+    .where(eq(clients.id, clientId));
+
+  if (!client) notFound();
+
+  const updateWithId = updateClient.bind(null, clientId);
+
   return (
     <div className="max-w-2xl">
-      <h2 className="text-2xl font-bold mb-6">Add New Client</h2>
+      <h2 className="text-2xl font-bold mb-6">Edit {client.name}</h2>
 
       <Card>
         <CardHeader>
           <CardTitle>Client Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <form action={createClient} className="space-y-4">
+          <form action={updateWithId} className="space-y-4">
             <div>
               <Label htmlFor="name">Restaurant Name *</Label>
               <Input
                 id="name"
                 name="name"
                 required
-                placeholder="e.g., Vida Mexican Kitchen"
+                defaultValue={client.name}
               />
             </div>
 
@@ -32,7 +52,7 @@ export default function NewClientPage() {
                 <Input
                   id="contactName"
                   name="contactName"
-                  placeholder="Owner or manager"
+                  defaultValue={client.contactName || ""}
                 />
               </div>
               <div>
@@ -40,7 +60,7 @@ export default function NewClientPage() {
                 <Input
                   id="contactPhone"
                   name="contactPhone"
-                  placeholder="(555) 123-4567"
+                  defaultValue={client.contactPhone || ""}
                 />
               </div>
             </div>
@@ -51,7 +71,7 @@ export default function NewClientPage() {
                 id="contactEmail"
                 name="contactEmail"
                 type="email"
-                placeholder="owner@restaurant.com"
+                defaultValue={client.contactEmail || ""}
               />
             </div>
 
@@ -60,24 +80,11 @@ export default function NewClientPage() {
               <Textarea
                 id="notes"
                 name="notes"
-                placeholder="Service plan, special requirements, etc."
+                defaultValue={client.notes || ""}
               />
             </div>
 
-            <div className="flex items-center gap-2 pt-2 border-t">
-              <input
-                type="checkbox"
-                id="provisionXibo"
-                name="provisionXibo"
-                defaultChecked
-                className="rounded"
-              />
-              <Label htmlFor="provisionXibo" className="font-normal">
-                Auto-provision in Xibo CMS (create folders, display groups)
-              </Label>
-            </div>
-
-            <Button type="submit">Create Client</Button>
+            <Button type="submit">Save Changes</Button>
           </form>
         </CardContent>
       </Card>
