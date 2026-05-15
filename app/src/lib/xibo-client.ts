@@ -113,6 +113,9 @@ export const xibo = {
   async createDisplayGroup(displayGroup: string, description?: string) {
     return (await xiboPost("/displaygroup", { displayGroup, description })).json();
   },
+  async deleteDisplayGroup(groupId: number) {
+    return (await xiboDelete(`/displaygroup/${groupId}`)).json();
+  },
   async assignDisplayToGroup(groupId: number, displayId: number) {
     return (await xiboPost(`/displaygroup/${groupId}/display/assign`, { id: [displayId] })).json();
   },

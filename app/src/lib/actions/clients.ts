@@ -95,6 +95,45 @@ export async function updateClient(id: number, formData: FormData) {
 }
 
 export async function deleteClient(id: number) {
+  // Get client's Xibo resources before deleting
+  const [client] = await db
+    .select()
+    .from(clients)
+    .where(eq(clients.id, id));
+
+  if (client) {
+    // Get all location display group IDs
+    const clientLocations = await db
+      .select({ xiboDisplayGroupId: locations.xiboDisplayGroupId })
+      .from(locations)
+      .where(eq(locations.clientId, id));
+
+    // Clean up Xibo resources
+    try {
+      // Delete location display groups
+      for (const loc of clientLocations) {
+        if (loc.xiboDisplayGroupId) {
+          await xibo.deleteDisplayGroup(loc.xiboDisplayGroupId);
+        }
+      }
+
+      // Delete "All Locations" display group (search by name)
+      const groups = await xibo.getDisplayGroups();
+      if (Array.isArray(groups)) {
+        const allLocGroup = groups.find(
+          (g: { displayGroup: string }) =>
+            g.displayGroup === `${client.name} - All Locations`
+        );
+        if (allLocGroup) {
+          await xibo.deleteDisplayGroup(allLocGroup.displayGroupId);
+        }
+      }
+    } catch (err) {
+      console.error("Xibo cleanup failed:", err);
+      // Continue with delete even if Xibo cleanup fails
+    }
+  }
+
   await db.delete(clients).where(eq(clients.id, id));
   redirect("/clients");
 }
