@@ -154,4 +154,88 @@ export const xibo = {
     const res = await xiboFetch("/schedule");
     return res.json();
   },
+
+  // Menu Boards
+  async getMenuBoards() {
+    const res = await xiboFetch("/menuboard");
+    return res.json();
+  },
+
+  async createMenuBoard(name: string) {
+    const res = await xiboFetch("/menuboard", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    });
+    return res.json();
+  },
+
+  async getMenuBoard(id: number) {
+    const res = await xiboFetch(`/menuboard/${id}`);
+    return res.json();
+  },
+
+  // Menu Board Categories
+  async createMenuBoardCategory(
+    menuBoardId: number,
+    data: { name: string }
+  ) {
+    const res = await xiboFetch(`/menuboard/${menuBoardId}/category`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  async updateMenuBoardCategory(
+    categoryId: number,
+    data: { name?: string }
+  ) {
+    const res = await xiboFetch(`/menuboard/category/${categoryId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  // Menu Board Products
+  async createMenuBoardProduct(
+    categoryId: number,
+    data: {
+      name: string;
+      description?: string;
+      price: string;
+      allergyInfo?: string;
+      availability?: number;
+    }
+  ) {
+    const res = await xiboFetch(`/menuboard/category/${categoryId}/product`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  async updateMenuBoardProduct(
+    productId: number,
+    data: {
+      name?: string;
+      description?: string;
+      price?: string;
+      allergyInfo?: string;
+      availability?: number;
+    }
+  ) {
+    const res = await xiboFetch(`/menuboard/product/${productId}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+    return res.json();
+  },
+
+  async deleteMenuBoardProduct(productId: number) {
+    const res = await xiboFetch(`/menuboard/product/${productId}`, {
+      method: "DELETE",
+    });
+    return res.json();
+  },
 };
