@@ -6,6 +6,8 @@ import {
   integer,
   varchar,
   pgEnum,
+  boolean,
+  numeric,
 } from "drizzle-orm/pg-core";
 
 export const screenOrientationEnum = pgEnum("screen_orientation", [
@@ -24,8 +26,10 @@ export const clients = pgTable("clients", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   clerkOrgId: varchar("clerk_org_id", { length: 255 }),
+  clerkUserId: varchar("clerk_user_id", { length: 255 }),
   xiboUserGroupId: integer("xibo_user_group_id"),
   xiboFolderId: integer("xibo_folder_id"),
+  xiboMenuBoardId: integer("xibo_menu_board_id"),
   contactName: varchar("contact_name", { length: 255 }),
   contactEmail: varchar("contact_email", { length: 255 }),
   contactPhone: varchar("contact_phone", { length: 50 }),
@@ -82,4 +86,41 @@ export const changeRequests = pgTable("change_requests", {
   adminNotes: text("admin_notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   resolvedAt: timestamp("resolved_at"),
+});
+
+// --- Menu Board Tables (client self-service) ---
+
+export const menuCategories = pgTable("menu_categories", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id")
+    .references(() => clients.id, { onDelete: "cascade" })
+    .notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  isVisible: boolean("is_visible").default(true).notNull(),
+  xiboMenuBoardCategoryId: integer("xibo_menu_board_category_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const menuItems = pgTable("menu_items", {
+  id: serial("id").primaryKey(),
+  categoryId: integer("category_id")
+    .references(() => menuCategories.id, { onDelete: "cascade" })
+    .notNull(),
+  clientId: integer("client_id")
+    .references(() => clients.id, { onDelete: "cascade" })
+    .notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  price: numeric("price", { precision: 10, scale: 2 }).notNull(),
+  imageUrl: text("image_url"),
+  isVisible: boolean("is_visible").default(true).notNull(),
+  isNew: boolean("is_new").default(false).notNull(),
+  allergens: text("allergens"),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  xiboMenuBoardProductId: integer("xibo_menu_board_product_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

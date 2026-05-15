@@ -11,11 +11,13 @@ import {
   FileText,
   Settings,
   Tv,
+  UtensilsCrossed,
 } from "lucide-react";
 
 const navItems = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/clients", label: "Clients", icon: Users },
+  { href: "/menu", label: "Menu Editor", icon: UtensilsCrossed },
   { href: "/locations", label: "Locations", icon: MapPin },
   { href: "/displays", label: "Displays", icon: Monitor },
   { href: "/requests", label: "Requests", icon: FileText },
