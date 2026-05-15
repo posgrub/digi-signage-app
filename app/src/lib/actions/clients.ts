@@ -16,6 +16,10 @@ export async function createClient(formData: FormData) {
   const provisionXibo = formData.get("provisionXibo") === "on";
   const sendInvite = formData.get("sendInvite") === "on";
 
+  if (!name || !contactEmail) {
+    throw new Error("Restaurant name and email are required");
+  }
+
   let xiboFolderId: number | null = null;
   let xiboUserGroupId: number | null = null;
 
@@ -57,15 +61,12 @@ export async function createClient(formData: FormData) {
     })
     .returning();
 
-  // Send Clerk invitation to client
-  if (sendInvite && contactEmail) {
-    try {
-      await inviteClientUser(contactEmail, name);
-      // When they accept, a webhook or sign-in check will link their
-      // Clerk user ID to this client record
-    } catch (err) {
-      console.error("Clerk invitation failed:", err);
-    }
+  // Send Clerk invitation to client (always sends — email is required)
+  try {
+    await inviteClientUser(contactEmail, name);
+  } catch (err) {
+    console.error("Clerk invitation failed:", err);
+    // Don't block client creation if invitation fails
   }
 
   redirect(`/clients/${newClient.id}`);
