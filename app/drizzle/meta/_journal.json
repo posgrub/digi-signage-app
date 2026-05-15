@@ -15,6 +15,13 @@
       "when": 1778806487325,
       "tag": "0001_workable_titanium_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778810249099,
+      "tag": "0002_bent_strong_guy",
+      "breakpoints": true
     }
   ]
 }

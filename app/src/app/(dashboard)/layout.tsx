@@ -12,16 +12,37 @@ import {
   Settings,
   Tv,
   UtensilsCrossed,
+  Megaphone,
+  Image,
+  Calendar,
 } from "lucide-react";
 
-const navItems = [
-  { href: "/", label: "Overview", icon: LayoutDashboard },
-  { href: "/clients", label: "Clients", icon: Users },
-  { href: "/menu", label: "Menu Editor", icon: UtensilsCrossed },
-  { href: "/locations", label: "Locations", icon: MapPin },
-  { href: "/displays", label: "Displays", icon: Monitor },
-  { href: "/requests", label: "Requests", icon: FileText },
-  { href: "/settings", label: "Settings", icon: Settings },
+const navSections = [
+  {
+    label: null,
+    items: [
+      { href: "/clients", label: "Clients", icon: Users },
+    ],
+  },
+  {
+    label: "Content",
+    items: [
+      { href: "/menu", label: "Menu Editor", icon: UtensilsCrossed },
+      { href: "/menu/eighty-six", label: "86 Board", icon: Monitor },
+      { href: "/promos", label: "Promos", icon: Megaphone },
+      { href: "/media", label: "Media", icon: Image },
+      { href: "/schedule", label: "Schedule", icon: Calendar },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { href: "/locations", label: "Locations", icon: MapPin },
+      { href: "/displays", label: "Displays", icon: Monitor },
+      { href: "/requests", label: "Requests", icon: FileText },
+      { href: "/settings", label: "Settings", icon: Settings },
+    ],
+  },
 ];
 
 export default function DashboardLayout({
@@ -53,31 +74,44 @@ export default function DashboardLayout({
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5">
-          {navItems.map((item) => {
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/" && pathname.startsWith(item.href));
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`
-                  flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all duration-150
-                  ${
-                    isActive
-                      ? "bg-copper/10 text-copper border border-copper/20"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent border border-transparent"
-                  }
-                `}
-              >
-                <item.icon
-                  className={`h-4 w-4 ${isActive ? "text-copper" : ""}`}
-                />
-                {item.label}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
+          {navSections.map((section, si) => (
+            <div key={si}>
+              {section.label && (
+                <p className="px-3 mb-1 text-[10px] uppercase tracking-[0.15em] text-muted-foreground/50 font-medium">
+                  {section.label}
+                </p>
+              )}
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const isActive =
+                    pathname === item.href ||
+                    (item.href !== "/" && pathname.startsWith(item.href) &&
+                     // Prevent /menu matching /menu/eighty-six when on /menu
+                     !(item.href === "/menu" && pathname.startsWith("/menu/")));
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`
+                        flex items-center gap-2.5 px-3 py-2 rounded-md text-[13px] font-medium transition-all duration-150
+                        ${
+                          isActive
+                            ? "bg-copper/10 text-copper border border-copper/20"
+                            : "text-muted-foreground hover:text-foreground hover:bg-accent border border-transparent"
+                        }
+                      `}
+                    >
+                      <item.icon
+                        className={`h-4 w-4 ${isActive ? "text-copper" : ""}`}
+                      />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* User section */}
