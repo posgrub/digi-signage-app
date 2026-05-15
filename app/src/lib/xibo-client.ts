@@ -31,88 +31,104 @@ async function getAccessToken(): Promise<string> {
   return cachedToken.token;
 }
 
-async function xiboFetch(
+// Xibo API uses form-urlencoded for POST/PUT, not JSON
+function toForm(data: Record<string, unknown>): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== undefined && value !== null) {
+      if (Array.isArray(value)) {
+        value.forEach((v) => params.append(`${key}[]`, String(v)));
+      } else {
+        params.append(key, String(value));
+      }
+    }
+  }
+  return params;
+}
+
+async function xiboGet(path: string): Promise<Response> {
+  const token = await getAccessToken();
+  return fetch(`${XIBO_CMS_URL}/api${path}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+async function xiboPost(
   path: string,
-  options: RequestInit = {}
+  data: Record<string, unknown> = {}
 ): Promise<Response> {
   const token = await getAccessToken();
   return fetch(`${XIBO_CMS_URL}/api${path}`, {
-    ...options,
+    method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      ...options.headers,
+      "Content-Type": "application/x-www-form-urlencoded",
     },
+    body: toForm(data),
+  });
+}
+
+async function xiboPut(
+  path: string,
+  data: Record<string, unknown> = {}
+): Promise<Response> {
+  const token = await getAccessToken();
+  return fetch(`${XIBO_CMS_URL}/api${path}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: toForm(data),
+  });
+}
+
+async function xiboDelete(path: string): Promise<Response> {
+  const token = await getAccessToken();
+  return fetch(`${XIBO_CMS_URL}/api${path}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
   });
 }
 
 export const xibo = {
   // Displays
   async getDisplays() {
-    const res = await xiboFetch("/display");
-    return res.json();
+    return (await xiboGet("/display")).json();
   },
-
   async getDisplay(id: number) {
-    const res = await xiboFetch(`/display/${id}`);
-    return res.json();
+    return (await xiboGet(`/display/${id}`)).json();
   },
-
   async authorizeDisplay(id: number) {
-    const res = await xiboFetch(`/display/authorise/${id}`, { method: "PUT" });
-    return res.json();
+    return (await xiboPut(`/display/authorise/${id}`)).json();
   },
-
   async setDefaultLayout(displayId: number, layoutId: number) {
-    const res = await xiboFetch(`/display/defaultlayout/${displayId}`, {
-      method: "PUT",
-      body: JSON.stringify({ layoutId }),
-    });
-    return res.json();
+    return (await xiboPut(`/display/defaultlayout/${displayId}`, { layoutId })).json();
   },
 
   // Display Groups
   async getDisplayGroups() {
-    const res = await xiboFetch("/displaygroup");
-    return res.json();
+    return (await xiboGet("/displaygroup")).json();
   },
-
   async createDisplayGroup(displayGroup: string, description?: string) {
-    const res = await xiboFetch("/displaygroup", {
-      method: "POST",
-      body: JSON.stringify({ displayGroup, description }),
-    });
-    return res.json();
+    return (await xiboPost("/displaygroup", { displayGroup, description })).json();
   },
-
   async assignDisplayToGroup(groupId: number, displayId: number) {
-    const res = await xiboFetch(`/displaygroup/${groupId}/display/assign`, {
-      method: "POST",
-      body: JSON.stringify({ id: [displayId] }),
-    });
-    return res.json();
+    return (await xiboPost(`/displaygroup/${groupId}/display/assign`, { id: [displayId] })).json();
   },
 
   // Folders
   async getFolders() {
-    const res = await xiboFetch("/folder");
-    return res.json();
+    return (await xiboGet("/folder")).json();
   },
-
   async createFolder(text: string, parentId?: number) {
-    const res = await xiboFetch("/folder", {
-      method: "POST",
-      body: JSON.stringify({ text, parentId }),
-    });
-    return res.json();
+    return (await xiboPost("/folder", { text, parentId })).json();
   },
 
   // Users
   async getUsers() {
-    const res = await xiboFetch("/user");
-    return res.json();
+    return (await xiboGet("/user")).json();
   },
-
   async createUser(user: {
     userName: string;
     password: string;
@@ -120,25 +136,18 @@ export const xibo = {
     userTypeId: number;
     homePageId?: number;
   }) {
-    const res = await xiboFetch("/user", {
-      method: "POST",
-      body: JSON.stringify(user),
-    });
-    return res.json();
+    return (await xiboPost("/user", user)).json();
   },
 
   // Layouts
   async getLayouts() {
-    const res = await xiboFetch("/layout");
-    return res.json();
+    return (await xiboGet("/layout")).json();
   },
 
   // Media Library
   async getMedia() {
-    const res = await xiboFetch("/library");
-    return res.json();
+    return (await xiboGet("/library")).json();
   },
-
   async uploadMedia(formData: FormData) {
     const token = await getAccessToken();
     const res = await fetch(`${XIBO_CMS_URL}/api/library`, {
@@ -151,50 +160,26 @@ export const xibo = {
 
   // Schedules
   async getSchedules() {
-    const res = await xiboFetch("/schedule");
-    return res.json();
+    return (await xiboGet("/schedule")).json();
   },
 
   // Menu Boards
   async getMenuBoards() {
-    const res = await xiboFetch("/menuboard");
-    return res.json();
+    return (await xiboGet("/menuboard")).json();
   },
-
   async createMenuBoard(name: string) {
-    const res = await xiboFetch("/menuboard", {
-      method: "POST",
-      body: JSON.stringify({ name }),
-    });
-    return res.json();
+    return (await xiboPost("/menuboard", { name })).json();
   },
-
   async getMenuBoard(id: number) {
-    const res = await xiboFetch(`/menuboard/${id}`);
-    return res.json();
+    return (await xiboGet(`/menuboard/${id}`)).json();
   },
 
   // Menu Board Categories
-  async createMenuBoardCategory(
-    menuBoardId: number,
-    data: { name: string }
-  ) {
-    const res = await xiboFetch(`/menuboard/${menuBoardId}/category`, {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-    return res.json();
+  async createMenuBoardCategory(menuBoardId: number, data: { name: string }) {
+    return (await xiboPost(`/menuboard/${menuBoardId}/category`, data)).json();
   },
-
-  async updateMenuBoardCategory(
-    categoryId: number,
-    data: { name?: string }
-  ) {
-    const res = await xiboFetch(`/menuboard/category/${categoryId}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    });
-    return res.json();
+  async updateMenuBoardCategory(categoryId: number, data: { name?: string }) {
+    return (await xiboPut(`/menuboard/category/${categoryId}`, data)).json();
   },
 
   // Menu Board Products
@@ -208,13 +193,8 @@ export const xibo = {
       availability?: number;
     }
   ) {
-    const res = await xiboFetch(`/menuboard/category/${categoryId}/product`, {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-    return res.json();
+    return (await xiboPost(`/menuboard/category/${categoryId}/product`, data)).json();
   },
-
   async updateMenuBoardProduct(
     productId: number,
     data: {
@@ -225,17 +205,9 @@ export const xibo = {
       availability?: number;
     }
   ) {
-    const res = await xiboFetch(`/menuboard/product/${productId}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    });
-    return res.json();
+    return (await xiboPut(`/menuboard/product/${productId}`, data)).json();
   },
-
   async deleteMenuBoardProduct(productId: number) {
-    const res = await xiboFetch(`/menuboard/product/${productId}`, {
-      method: "DELETE",
-    });
-    return res.json();
+    return (await xiboDelete(`/menuboard/product/${productId}`)).json();
   },
 };
