@@ -15,6 +15,7 @@ import {
   Image,
   Calendar,
   Ban,
+  Palette,
 } from "lucide-react";
 
 // Admin sees everything
@@ -28,6 +29,7 @@ const adminNav = [
     items: [
       { href: "/menu", label: "Menu Editor", icon: UtensilsCrossed },
       { href: "/menu/eighty-six", label: "86 Board", icon: Ban },
+      { href: "/templates", label: "Board Design", icon: Palette },
       { href: "/promos", label: "Promos", icon: Megaphone },
       { href: "/media", label: "Media", icon: Image },
       { href: "/schedule", label: "Schedule", icon: Calendar },

@@ -203,6 +203,29 @@ export const clientFeatures = pgTable("client_features", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// --- Menu Board Templates ---
+
+export const menuTemplates = pgTable("menu_templates", {
+  id: serial("id").primaryKey(),
+  clientId: integer("client_id")
+    .references(() => clients.id, { onDelete: "cascade" })
+    .notNull(),
+  templateStyle: varchar("template_style", { length: 50 }).default("classic").notNull(),
+  primaryColor: varchar("primary_color", { length: 20 }).default("#dc2626").notNull(),
+  secondaryColor: varchar("secondary_color", { length: 20 }).default("#1a1a1a").notNull(),
+  accentColor: varchar("accent_color", { length: 20 }).default("#fbbf24").notNull(),
+  textColor: varchar("text_color", { length: 20 }).default("#ffffff").notNull(),
+  fontFamily: varchar("font_family", { length: 100 }).default("Inter").notNull(),
+  logoUrl: text("logo_url"),
+  backgroundImageUrl: text("background_image_url"),
+  showPrices: boolean("show_prices").default(true).notNull(),
+  showDescriptions: boolean("show_descriptions").default(true).notNull(),
+  showImages: boolean("show_images").default(true).notNull(),
+  columns: integer("columns").default(2).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Feature keys:
 // "menu_editor"       — can edit menu items/prices
 // "86_board"          — can 86 items
