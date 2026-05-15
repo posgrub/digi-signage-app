@@ -1,29 +1,25 @@
 export const dynamic = "force-dynamic";
 
 import { db } from "@/db";
-import { menuItems, menuCategories, clients } from "@/db/schema";
+import { menuItems, menuCategories } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toggleItemVisibility } from "@/lib/actions/menu";
 import { Ban, CheckCircle } from "lucide-react";
+import { getActiveClientId } from "@/lib/scope";
 
 export default async function EightySixPage() {
-  const allClients = await db
-    .select({ id: clients.id, name: clients.name })
-    .from(clients)
-    .limit(1);
+  const { clientId, clientName } = await getActiveClientId();
 
-  if (allClients.length === 0) {
+  if (!clientId) {
     return (
       <div>
         <h2 className="text-2xl font-semibold tracking-tight mb-2">86 Board</h2>
-        <p className="text-muted-foreground">No clients configured.</p>
+        <p className="text-muted-foreground">No restaurant configured.</p>
       </div>
     );
   }
-
-  const clientId = allClients[0].id;
 
   const categories = await db
     .select()
@@ -52,27 +48,20 @@ export default async function EightySixPage() {
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">86 Board</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            Tap to mark items sold out or available. Changes update screens
-            instantly.
+            {clientName} — tap to mark items sold out or available. Updates screens instantly.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {unavailableCount > 0 && (
-            <Badge
-              variant="destructive"
-              className="text-xs"
-            >
-              {unavailableCount} item{unavailableCount !== 1 ? "s" : ""} 86&apos;d
-            </Badge>
-          )}
-        </div>
+        {unavailableCount > 0 && (
+          <Badge variant="destructive" className="text-xs">
+            {unavailableCount} item{unavailableCount !== 1 ? "s" : ""} 86&apos;d
+          </Badge>
+        )}
       </div>
 
       <div className="space-y-6">
         {categories.map((category) => {
           const catItems = itemsByCategory.get(category.id) || [];
           if (catItems.length === 0) return null;
-
           return (
             <div key={category.id}>
               <h3 className="text-xs uppercase tracking-[0.1em] font-medium text-muted-foreground mb-2 px-1">
@@ -80,12 +69,7 @@ export default async function EightySixPage() {
               </h3>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 {catItems.map((item) => {
-                  const toggleAction = toggleItemVisibility.bind(
-                    null,
-                    item.id,
-                    !item.isVisible
-                  );
-
+                  const toggleAction = toggleItemVisibility.bind(null, item.id, !item.isVisible);
                   return (
                     <form key={item.id} action={toggleAction}>
                       <button
@@ -103,13 +87,7 @@ export default async function EightySixPage() {
                             ) : (
                               <Ban className="h-4 w-4 text-destructive shrink-0" />
                             )}
-                            <span
-                              className={`text-sm font-medium truncate ${
-                                !item.isVisible
-                                  ? "line-through text-muted-foreground"
-                                  : ""
-                              }`}
-                            >
+                            <span className={`text-sm font-medium truncate ${!item.isVisible ? "line-through text-muted-foreground" : ""}`}>
                               {item.name}
                             </span>
                           </div>
@@ -118,9 +96,7 @@ export default async function EightySixPage() {
                           </span>
                         </div>
                         <p className="text-[10px] text-muted-foreground mt-1 ml-6">
-                          {item.isVisible
-                            ? "Tap to 86"
-                            : "Tap to mark available"}
+                          {item.isVisible ? "Tap to 86" : "Tap to mark available"}
                         </p>
                       </button>
                     </form>
@@ -130,13 +106,11 @@ export default async function EightySixPage() {
             </div>
           );
         })}
-
-        {categories.length === 0 && (
+        {items.length === 0 && (
           <Card className="border-dashed">
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground text-sm">
-                No menu items yet. Add categories and items in the Menu Editor
-                first.
+                No menu items yet. Add categories and items in the Menu Editor first.
               </p>
             </CardContent>
           </Card>
