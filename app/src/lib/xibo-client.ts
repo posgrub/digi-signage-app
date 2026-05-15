@@ -213,4 +213,20 @@ export const xibo = {
   async deleteMenuBoardProduct(productId: number) {
     return (await xiboDelete(`/menuboard/product/${productId}`)).json();
   },
+  async deleteMenuBoardCategory(categoryId: number) {
+    return (await xiboDelete(`/menuboard/category/${categoryId}`)).json();
+  },
+  async deleteMenuBoard(menuBoardId: number) {
+    return (await xiboDelete(`/menuboard/${menuBoardId}`)).json();
+  },
+
+  // Display Group update (rename)
+  async updateDisplayGroup(groupId: number, displayGroup: string, description?: string) {
+    return (await xiboPut(`/displaygroup/${groupId}`, { displayGroup, description })).json();
+  },
+
+  // Folder delete
+  async deleteFolder(folderId: number) {
+    return (await xiboDelete(`/folder/${folderId}`)).json();
+  },
 };

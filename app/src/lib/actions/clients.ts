@@ -14,7 +14,6 @@ export async function createClient(formData: FormData) {
   const contactPhone = formData.get("contactPhone") as string;
   const notes = formData.get("notes") as string;
   const provisionXibo = formData.get("provisionXibo") === "on";
-  const sendInvite = formData.get("sendInvite") === "on";
 
   if (!name || !contactEmail) {
     throw new Error("Restaurant name and email are required");
@@ -23,7 +22,6 @@ export async function createClient(formData: FormData) {
   let xiboFolderId: number | null = null;
   let xiboUserGroupId: number | null = null;
 
-  // Xibo provisioning
   if (provisionXibo) {
     try {
       const folder = await xibo.createFolder(`Client - ${name}`);
@@ -47,7 +45,6 @@ export async function createClient(formData: FormData) {
     }
   }
 
-  // Create client record
   const [newClient] = await db
     .insert(clients)
     .values({
@@ -61,12 +58,11 @@ export async function createClient(formData: FormData) {
     })
     .returning();
 
-  // Send Clerk invitation to client (always sends — email is required)
+  // Send Clerk invitation
   try {
     await inviteClientUser(contactEmail, name);
   } catch (err) {
     console.error("Clerk invitation failed:", err);
-    // Don't block client creation if invitation fails
   }
 
   redirect(`/clients/${newClient.id}`);
@@ -78,6 +74,12 @@ export async function updateClient(id: number, formData: FormData) {
   const contactEmail = formData.get("contactEmail") as string;
   const contactPhone = formData.get("contactPhone") as string;
   const notes = formData.get("notes") as string;
+
+  // Get old name to detect rename
+  const [oldClient] = await db
+    .select({ name: clients.name })
+    .from(clients)
+    .where(eq(clients.id, id));
 
   await db
     .update(clients)
@@ -91,24 +93,57 @@ export async function updateClient(id: number, formData: FormData) {
     })
     .where(eq(clients.id, id));
 
+  // If name changed, update Xibo display groups
+  if (oldClient && oldClient.name !== name) {
+    try {
+      const groups = await xibo.getDisplayGroups();
+      if (Array.isArray(groups)) {
+        // Rename "All Locations" group
+        const allLocGroup = groups.find(
+          (g: { displayGroup: string }) =>
+            g.displayGroup === `${oldClient.name} - All Locations`
+        );
+        if (allLocGroup) {
+          await xibo.updateDisplayGroup(
+            allLocGroup.displayGroupId,
+            `${name} - All Locations`,
+            `All displays for ${name}`
+          );
+        }
+
+        // Rename location-specific groups
+        const clientLocations = await db
+          .select({ name: locations.name, xiboDisplayGroupId: locations.xiboDisplayGroupId })
+          .from(locations)
+          .where(eq(locations.clientId, id));
+
+        for (const loc of clientLocations) {
+          if (loc.xiboDisplayGroupId) {
+            await xibo.updateDisplayGroup(
+              loc.xiboDisplayGroupId,
+              `${name} - ${loc.name}`,
+              `Displays at ${loc.name} for ${name}`
+            );
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Xibo rename failed:", err);
+    }
+  }
+
   redirect(`/clients/${id}`);
 }
 
 export async function deleteClient(id: number) {
-  // Get client's Xibo resources before deleting
-  const [client] = await db
-    .select()
-    .from(clients)
-    .where(eq(clients.id, id));
+  const [client] = await db.select().from(clients).where(eq(clients.id, id));
 
   if (client) {
-    // Get all location display group IDs
     const clientLocations = await db
       .select({ xiboDisplayGroupId: locations.xiboDisplayGroupId })
       .from(locations)
       .where(eq(locations.clientId, id));
 
-    // Clean up Xibo resources
     try {
       // Delete location display groups
       for (const loc of clientLocations) {
@@ -117,7 +152,7 @@ export async function deleteClient(id: number) {
         }
       }
 
-      // Delete "All Locations" display group (search by name)
+      // Delete "All Locations" display group
       const groups = await xibo.getDisplayGroups();
       if (Array.isArray(groups)) {
         const allLocGroup = groups.find(
@@ -128,9 +163,13 @@ export async function deleteClient(id: number) {
           await xibo.deleteDisplayGroup(allLocGroup.displayGroupId);
         }
       }
+
+      // Delete Xibo folder
+      if (client.xiboFolderId) {
+        await xibo.deleteFolder(client.xiboFolderId);
+      }
     } catch (err) {
       console.error("Xibo cleanup failed:", err);
-      // Continue with delete even if Xibo cleanup fails
     }
   }
 
@@ -150,7 +189,7 @@ export async function createLocation(formData: FormData) {
   let xiboDisplayGroupId: number | null = null;
 
   const [client] = await db
-    .select({ name: clients.name })
+    .select({ name: clients.name, xiboFolderId: clients.xiboFolderId })
     .from(clients)
     .where(eq(clients.id, clientId));
 
@@ -162,15 +201,10 @@ export async function createLocation(formData: FormData) {
       );
       xiboDisplayGroupId = group.displayGroupId || group.id;
 
-      const [clientRecord] = await db
-        .select({ xiboFolderId: clients.xiboFolderId })
-        .from(clients)
-        .where(eq(clients.id, clientId));
-
-      if (clientRecord?.xiboFolderId) {
+      if (client.xiboFolderId) {
         const locFolder = await xibo.createFolder(
           `Location - ${name}`,
-          clientRecord.xiboFolderId
+          client.xiboFolderId
         );
         const locFolderId = locFolder.folderId || locFolder.id;
         if (locFolderId) {
@@ -200,6 +234,25 @@ export async function createLocation(formData: FormData) {
   redirect(`/clients/${clientId}`);
 }
 
+export async function deleteLocation(locationId: number, clientId: number) {
+  const [location] = await db
+    .select()
+    .from(locations)
+    .where(eq(locations.id, locationId));
+
+  if (location?.xiboDisplayGroupId) {
+    try {
+      await xibo.deleteDisplayGroup(location.xiboDisplayGroupId);
+    } catch (err) {
+      console.error("Xibo location cleanup failed:", err);
+    }
+  }
+
+  // DB cascade deletes screens
+  await db.delete(locations).where(eq(locations.id, locationId));
+  redirect(`/clients/${clientId}`);
+}
+
 export async function createScreen(formData: FormData) {
   const locationId = parseInt(formData.get("locationId") as string);
   const clientId = parseInt(formData.get("clientId") as string);
@@ -220,5 +273,10 @@ export async function createScreen(formData: FormData) {
     tvModel: tvModel || null,
   });
 
+  redirect(`/clients/${clientId}`);
+}
+
+export async function deleteScreen(screenId: number, clientId: number) {
+  await db.delete(screens).where(eq(screens.id, screenId));
   redirect(`/clients/${clientId}`);
 }
