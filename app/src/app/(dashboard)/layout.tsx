@@ -1,10 +1,9 @@
 "use client";
 
-import { UserButton } from "@clerk/nextjs";
+import { UserButton, useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
   Users,
   Monitor,
   MapPin,
@@ -15,20 +14,20 @@ import {
   Megaphone,
   Image,
   Calendar,
+  Ban,
 } from "lucide-react";
 
-const navSections = [
+// Admin sees everything
+const adminNav = [
   {
     label: null,
-    items: [
-      { href: "/clients", label: "Clients", icon: Users },
-    ],
+    items: [{ href: "/clients", label: "Clients", icon: Users }],
   },
   {
     label: "Content",
     items: [
       { href: "/menu", label: "Menu Editor", icon: UtensilsCrossed },
-      { href: "/menu/eighty-six", label: "86 Board", icon: Monitor },
+      { href: "/menu/eighty-six", label: "86 Board", icon: Ban },
       { href: "/promos", label: "Promos", icon: Megaphone },
       { href: "/media", label: "Media", icon: Image },
       { href: "/schedule", label: "Schedule", icon: Calendar },
@@ -45,12 +44,45 @@ const navSections = [
   },
 ];
 
+// Client sees only their stuff
+const clientNav = [
+  {
+    label: "My Restaurant",
+    items: [
+      { href: "/menu", label: "Menu Editor", icon: UtensilsCrossed },
+      { href: "/menu/eighty-six", label: "86 Board", icon: Ban },
+      { href: "/promos", label: "Promos & Specials", icon: Megaphone },
+      { href: "/media", label: "Media Library", icon: Image },
+    ],
+  },
+  {
+    label: "Screens",
+    items: [
+      { href: "/displays", label: "My Displays", icon: Monitor },
+      { href: "/schedule", label: "Schedule", icon: Calendar },
+    ],
+  },
+  {
+    label: "Support",
+    items: [
+      { href: "/requests", label: "Change Requests", icon: FileText },
+    ],
+  },
+];
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { user } = useUser();
+
+  const isClient = user?.publicMetadata?.role === "client";
+  const navSections = isClient ? clientNav : adminNav;
+  const brandSubtext = isClient
+    ? (user?.publicMetadata?.clientName as string) || "Client Portal"
+    : "Signage Control";
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -67,7 +99,7 @@ export default function DashboardLayout({
                 PosezTech
               </h1>
               <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                Signage Control
+                {brandSubtext}
               </p>
             </div>
           </div>
@@ -86,9 +118,12 @@ export default function DashboardLayout({
                 {section.items.map((item) => {
                   const isActive =
                     pathname === item.href ||
-                    (item.href !== "/" && pathname.startsWith(item.href) &&
-                     // Prevent /menu matching /menu/eighty-six when on /menu
-                     !(item.href === "/menu" && pathname.startsWith("/menu/")));
+                    (item.href !== "/" &&
+                      pathname.startsWith(item.href) &&
+                      !(
+                        item.href === "/menu" &&
+                        pathname.startsWith("/menu/")
+                      ));
                   return (
                     <Link
                       key={item.href}
@@ -122,7 +157,14 @@ export default function DashboardLayout({
                 elements: { avatarBox: "h-7 w-7" },
               }}
             />
-            <span className="text-xs text-muted-foreground">Account</span>
+            <div className="min-w-0">
+              <span className="text-xs text-muted-foreground block truncate">
+                {user?.firstName || "Account"}
+              </span>
+              {isClient && (
+                <span className="text-[10px] text-copper/60">Client</span>
+              )}
+            </div>
           </div>
         </div>
       </aside>

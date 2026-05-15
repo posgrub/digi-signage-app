@@ -5,6 +5,7 @@ import { clients, locations, screens } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { xibo } from "@/lib/xibo-client";
+import { inviteClientUser } from "@/lib/clerk-admin";
 
 export async function createClient(formData: FormData) {
   const name = formData.get("name") as string;
@@ -13,17 +14,17 @@ export async function createClient(formData: FormData) {
   const contactPhone = formData.get("contactPhone") as string;
   const notes = formData.get("notes") as string;
   const provisionXibo = formData.get("provisionXibo") === "on";
+  const sendInvite = formData.get("sendInvite") === "on";
 
   let xiboFolderId: number | null = null;
   let xiboUserGroupId: number | null = null;
 
+  // Xibo provisioning
   if (provisionXibo) {
     try {
-      // Create client folder in Xibo
       const folder = await xibo.createFolder(`Client - ${name}`);
       xiboFolderId = folder.folderId || folder.id;
 
-      // Create sub-folders
       if (xiboFolderId) {
         await Promise.all([
           xibo.createFolder("Layouts", xiboFolderId),
@@ -33,17 +34,16 @@ export async function createClient(formData: FormData) {
         ]);
       }
 
-      // Create "all locations" display group
       await xibo.createDisplayGroup(
         `${name} - All Locations`,
         `All displays for ${name}`
       );
     } catch (err) {
       console.error("Xibo provisioning failed:", err);
-      // Continue — save client even if Xibo fails
     }
   }
 
+  // Create client record
   const [newClient] = await db
     .insert(clients)
     .values({
@@ -56,6 +56,17 @@ export async function createClient(formData: FormData) {
       xiboUserGroupId,
     })
     .returning();
+
+  // Send Clerk invitation to client
+  if (sendInvite && contactEmail) {
+    try {
+      await inviteClientUser(contactEmail, name);
+      // When they accept, a webhook or sign-in check will link their
+      // Clerk user ID to this client record
+    } catch (err) {
+      console.error("Clerk invitation failed:", err);
+    }
+  }
 
   redirect(`/clients/${newClient.id}`);
 }
@@ -98,7 +109,6 @@ export async function createLocation(formData: FormData) {
 
   let xiboDisplayGroupId: number | null = null;
 
-  // Get client name for Xibo naming
   const [client] = await db
     .select({ name: clients.name })
     .from(clients)
@@ -106,14 +116,12 @@ export async function createLocation(formData: FormData) {
 
   if (provisionXibo && client) {
     try {
-      // Create location display group
       const group = await xibo.createDisplayGroup(
         `${client.name} - ${name}`,
         `Displays at ${name} for ${client.name}`
       );
       xiboDisplayGroupId = group.displayGroupId || group.id;
 
-      // Create location sub-folders under client folder
       const [clientRecord] = await db
         .select({ xiboFolderId: clients.xiboFolderId })
         .from(clients)
