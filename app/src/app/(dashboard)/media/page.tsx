@@ -5,9 +5,10 @@ import { mediaAssets } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Image, Film, Trash2, Upload, FileImage } from "lucide-react";
+import { Image, Film, Trash2, FileImage } from "lucide-react";
 import { deleteMedia } from "@/lib/actions/media";
 import { getActiveClientId } from "@/lib/scope";
+import { MediaUploader } from "@/components/media-uploader";
 
 export default async function MediaPage() {
   const { clientId, clientName } = await getActiveClientId();
@@ -34,23 +35,20 @@ export default async function MediaPage() {
         </div>
       </div>
 
-      <Card className="mb-6 border-dashed border-copper/30">
-        <CardContent className="py-8 text-center">
-          <Upload className="h-8 w-8 text-copper/40 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">Upload images and videos for your menu boards and promotions</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">Supported: JPG, PNG, MP4, WebM — Max 50MB per file</p>
-          <p className="text-xs text-copper/60 mt-3">
-            Media upload via the app will be available soon. For now, upload directly in{" "}
-            <a href={process.env.XIBO_CMS_URL || "#"} target="_blank" rel="noopener noreferrer" className="underline">Xibo CMS</a>.
-          </p>
-        </CardContent>
-      </Card>
+      {/* Upload area */}
+      <div className="mb-6">
+        <MediaUploader />
+      </div>
 
+      {/* Media Grid */}
       {assets.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="py-16 text-center">
             <FileImage className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
             <p className="text-muted-foreground">No media uploaded yet.</p>
+            <p className="text-sm text-muted-foreground/60 mt-1">
+              Upload food photos, promo images, and videos for your screens.
+            </p>
           </CardContent>
         </Card>
       ) : (
@@ -65,6 +63,7 @@ export default async function MediaPage() {
                   ) : (
                     <div className="text-center">
                       {asset.fileType === "video" ? <Film className="h-8 w-8 text-muted-foreground/30 mx-auto" /> : <Image className="h-8 w-8 text-muted-foreground/30 mx-auto" />}
+                      <p className="text-[10px] text-muted-foreground mt-1">{asset.fileName}</p>
                     </div>
                   )}
                 </div>
@@ -82,6 +81,11 @@ export default async function MediaPage() {
                       </button>
                     </form>
                   </div>
+                  {asset.xiboMediaId && (
+                    <Badge variant="secondary" className="text-[9px] mt-1 bg-copper/5 text-copper/70 border border-copper/10">
+                      Xibo #{asset.xiboMediaId}
+                    </Badge>
+                  )}
                 </CardContent>
               </Card>
             );
